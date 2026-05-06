@@ -187,8 +187,8 @@ async def patch_attendance(attendance_id: int, payload: AttendanceUpdate):
 
 # ── Export ─────────────────────────────────────────────────────────────────────
 @app.get("/export/csv")
-def export_csv(start: str = None, end: str = None):
-    rows = get_attendance_log(get_db(), start, end)
+def export_csv(start: str = None, end: str = None, student_id: int = None):
+    rows = get_attendance_log(get_db(), start, end, student_id)
     buf  = io.StringIO()
     w    = csv.writer(buf)
     w.writerow(["Date","Name","AG Number","FP ID","Class","Section","Semester","Time","Status"])
@@ -198,5 +198,6 @@ def export_csv(start: str = None, end: str = None):
                     r["class_name"], r["section"], r["semester"],
                     r["time"] or "—", r["status"]])
     buf.seek(0)
+    fname = f"attendance_student_{student_id}.csv" if student_id else "attendance.csv"
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=attendance.csv"})
+        headers={"Content-Disposition": f"attachment; filename={fname}"})

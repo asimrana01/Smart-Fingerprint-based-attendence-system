@@ -221,22 +221,28 @@ function applyFilters() {
 
   const tbody = document.getElementById('log-tbody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No records found</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No records found</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(r => `
     <tr>
-      <td style="color:var(--text-3)">${r.date}</td>
+      <td style="color:var(--gray-500)">${r.date}</td>
       <td><div class="name-cell">
         <div class="av ${avColor(r.student_id)}">${initials(r.name)}</div>
         ${esc(r.name)}
       </div></td>
       <td><span class="pill mono">${esc(r.ag_number)}</span></td>
-      <td style="color:var(--text-3)">${esc(r.class_name)}</td>
-      <td style="color:var(--text-3)">${esc(r.section)}</td>
-      <td style="color:var(--text-3)">${esc(r.semester)}</td>
-      <td style="color:var(--text-3)">${r.time || '—'}</td>
+      <td style="color:var(--gray-500)">${esc(r.class_name)}</td>
+      <td style="color:var(--gray-500)">${esc(r.section)}</td>
+      <td style="color:var(--gray-500)">${esc(r.semester)}</td>
+      <td style="color:var(--gray-500)">${r.time || '—'}</td>
       <td><span class="pill ${r.status}">${r.status}</span></td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="btn sm outline" onclick="exportStudentCSV(${r.student_id},'${esc(r.name)}')" title="Export CSV">CSV</button>
+          <button class="btn sm outline" onclick="exportStudentPDF(${r.student_id},'${esc(r.name)}')" title="Export PDF">PDF</button>
+        </div>
+      </td>
     </tr>`).join('');
 }
 
@@ -423,21 +429,64 @@ function flashScanner(cls) {
 }
 
 // ── Export ─────────────────────────────────────────────────
-function exportCSV() { window.location.href = API + '/export/csv'; }
+function exportCSV(studentId = null) {
+  const url = studentId ? `${API}/export/csv?student_id=${studentId}` : `${API}/export/csv`;
+  window.location.href = url;
+}
+
+function exportStudentCSV(studentId, name) {
+  window.location.href = `${API}/export/csv?student_id=${studentId}`;
+  toast(`Exporting CSV for ${name}`, 'info');
+}
+
+function exportStudentPDF(studentId, name) {
+  const rows = logData
+    .filter(r => r.student_id === studentId)
+    .map(r =>
+      `<tr><td>${r.date}</td><td>${esc(r.name)}</td><td>${r.ag_number}</td>` +
+      `<td>${r.class_name}</td><td>${r.section}</td><td>${r.semester}</td>` +
+      `<td>${r.time||'—'}</td><td class="${r.status}">${r.status}</td></tr>`
+    ).join('');
+
+  if (!rows) { toast('No records for this student', 'error'); return; }
+  openPrintWindow(rows, `Attendance Report — ${name}`);
+}
+
 function exportPDF() {
   const rows = logData.map(r =>
     `<tr><td>${r.date}</td><td>${esc(r.name)}</td><td>${r.ag_number}</td>` +
     `<td>${r.class_name}</td><td>${r.section}</td><td>${r.semester}</td>` +
-    `<td>${r.time||'—'}</td><td>${r.status}</td></tr>`).join('');
-  const win = window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>Attendance Report</title>
-    <style>body{font-family:sans-serif;padding:30px;font-size:13px}h2{margin-bottom:16px}
-    table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px 12px;text-align:left}
-    th{background:#f3f4f6;font-size:11px;text-transform:uppercase}
-    .present{color:green}.absent{color:red}</style></head><body>
-    <h2>Attendance Report — ${new Date().toLocaleDateString()}</h2>
-    <table><thead><tr><th>Date</th><th>Name</th><th>AG Number</th><th>Class</th><th>Section</th><th>Semester</th><th>Time</th><th>Status</th></tr></thead>
-    <tbody>${rows}</tbody></table>
+    `<td>${r.time||'—'}</td><td class="${r.status}">${r.status}</td></tr>`
+  ).join('');
+  openPrintWindow(rows, `Full Attendance Report — ${new Date().toLocaleDateString()}`);
+}
+
+function openPrintWindow(rows, title) {
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
+    <style>
+      body{font-family:'Segoe UI',sans-serif;padding:36px;font-size:13px;color:#1f2937}
+      h2{margin-bottom:6px;font-size:20px;color:#111827}
+      p{margin-bottom:20px;color:#6b7280;font-size:12px}
+      table{width:100%;border-collapse:collapse}
+      th{text-align:left;padding:10px 14px;font-size:10px;text-transform:uppercase;
+         letter-spacing:.06em;color:#6b7280;background:#f9fafb;border-bottom:2px solid #e5e7eb}
+      td{padding:11px 14px;border-bottom:1px solid #f3f4f6;color:#374151}
+      tr:hover td{background:#f9fafb}
+      .present{color:#15803d;font-weight:600}.absent{color:#b91c1c;font-weight:600}
+      @media print{body{padding:0}}
+    </style></head><body>
+    <h2>${title}</h2>
+    <p>Generated: ${new Date().toLocaleString()}</p>
+    <table><thead><tr>
+      <th>Date</th><th>Name</th><th>AG Number</th>
+      <th>Class</th><th>Section</th><th>Semester</th>
+      <th>Time</th><th>Status</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    <script>window.onload=()=>window.print()<\/script>
+  </body></html>`);
+  win.document.close();
+}
     <script>window.onload=()=>window.print()<\/script></body></html>`);
   win.document.close();
 }
