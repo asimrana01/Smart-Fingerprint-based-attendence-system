@@ -102,37 +102,27 @@ def get_enroll_last():
 async def scan(payload: AttendanceScan):
     global enroll_mode, enroll_last_fp
 
+    print("===== SCAN HIT =====")
+    print("Payload:", payload)
+    print("Enroll mode:", enroll_mode)
+
     if enroll_mode:
-        enroll_mode    = False
+        print("ENTERED ENROLL BLOCK")
+
+        enroll_mode = False
         enroll_last_fp = payload.fp_id
-        event = {"event": "enroll_scan", "fp_id": payload.fp_id, "confidence": payload.confidence}
+
+        event = {
+            "event": "enroll_scan",
+            "fp_id": payload.fp_id,
+            "confidence": payload.confidence
+        }
+
+        print("Broadcasting:", event)
+
         await manager.broadcast(event)
+
         return event
-
-    db = get_db()
-    session = get_active_session(db)
-    if not session:
-        return {"status": "no_session", "message": "No active attendance session"}
-
-    student = get_student_by_fp(db, payload.fp_id)
-    if not student:
-        await manager.broadcast({"event": "scan_unknown", "fp_id": payload.fp_id})
-        return {"status": "unknown", "message": "Fingerprint not enrolled"}
-
-    result = record_scan(db, student["id"], session["id"])
-    event = {
-        "event":      "scan",
-        "student_id": student["id"],
-        "name":       student["name"],
-        "ag_number":  student["ag_number"],
-        "fp_id":      student["fp_id"],
-        "status":     result["status"],
-        "time":       datetime.now().strftime("%H:%M:%S"),
-        "date":       str(date.today()),
-    }
-    await manager.broadcast(event)
-    return event
-
 # ── Students ───────────────────────────────────────────────────────────────────
 @app.get("/students")
 def list_students():

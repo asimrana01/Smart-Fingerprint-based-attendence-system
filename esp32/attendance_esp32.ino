@@ -67,7 +67,7 @@ void setup() {
   // Verify sensor
   if (finger.verifyPassword()) {
     finger.getParameters();
-    Serial.printf("Sensor OK  Capacity:%d  Stored:%d\n", finger.capacity, finger.fingerCount);
+    Serial.printf("Sensor OK  Capacity:%d\n", finger.capacity);
     beep(1, 150); greenFlash(1);
   } else {
     Serial.println("Sensor NOT found"); redFlash(5); while (1);
